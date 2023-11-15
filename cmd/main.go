@@ -27,14 +27,49 @@ func (tc *TaskController) AddTask(task Task) error {
 }
 
 func (tc *TaskController) ListTasks() []Task {
-	return nil
+	file, err := os.Open(TaskFileName)
+	if err != nil {
+		log.Println("Error opening file:", err)
+		return nil
+	}
+	defer file.Close()
+
+	taskBytes, err := io.ReadAll(file)
+	if err != nil {
+		log.Println("Error reading file:", err)
+		return nil
+	}
+
+	tasks := strings.Split(string(taskBytes), "\n")
+	return tc.convertToTasks(tasks)
+}
+
+func (tc *TaskController) convertToTasks(tasks []string) []Task {
+	var convertedTasks []Task
+	for _, task := range tasks {
+		if task != "" {
+			// split the task into id and description
+			taskParts := strings.Split(task, TaskSplitString)
+			id := strings.TrimSpace(taskParts[0])
+			description := strings.TrimSpace(taskParts[1])
+
+			convertedTasks = append(convertedTasks, Task{
+				ID:          id,
+				Description: description,
+			})
+		}
+	}
+
+	return convertedTasks
 }
 
 type TaskView struct {
 }
 
 func (tv *TaskView) DisplayTasks(tasks []Task) {
-
+	for _, task := range tasks {
+		fmt.Printf("%s %s\n", task.ID, task.Description)
+	}
 }
 
 func (tv *TaskView) DisplayError(err error) {
@@ -65,7 +100,9 @@ func main() {
 	case "list":
 		tasks := tc.ListTasks()
 		tv.DisplayTasks(tasks)
-	// case "update":
+	case "update":
+		// update task
+
 	// 	updateTask()
 	// case "delete":
 	// 	deleteTask()
@@ -102,38 +139,6 @@ func WriteTaskToFile(fileName, taskId, description string) error {
 	}
 
 	return nil
-}
-
-// listTasks reads tasks from a file and prints them to the console
-func listTasks() {
-	// Read tasks from a file
-	file, err := os.Open(TaskFileName)
-	if err != nil {
-		log.Println("Error opening file:", err)
-		return
-	}
-	defer file.Close()
-
-	taskBytes, err := io.ReadAll(file)
-	if err != nil {
-		log.Println("Error reading file:", err)
-		return
-	}
-
-	tasks := strings.Split(string(taskBytes), "\n")
-
-	// Print the tasks
-	log.Println("Tasks:")
-	for _, task := range tasks {
-		if task != "" {
-			// split the task into id and description
-			taskParts := strings.Split(task, TaskSplitString)
-			id := strings.TrimSpace(taskParts[0])
-			description := strings.TrimSpace(taskParts[1])
-
-			fmt.Printf("%s %s\n", id, description)
-		}
-	}
 }
 
 func updateTask() {

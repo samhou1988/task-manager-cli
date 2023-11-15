@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"strings"
 
@@ -12,7 +13,7 @@ import (
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Println("Please provide a command.")
+		log.Println("Please provide a command.")
 		os.Exit(1)
 	}
 
@@ -30,13 +31,30 @@ func main() {
 	case "deleteAll":
 		deleteAllTask()
 	default:
-		fmt.Println("Invalid command.")
+		log.Println("Invalid command.")
 	}
 }
 
-// create a constant for the file name
-const fileName = "tasks.txt"
-const splitString = "##"
+const (
+	TaskFileName       = "tasks.txt"
+	TaskFilePermission = 0644
+	TaskSplitString    = "##"
+)
+
+func WriteTaskToFile(fileName, taskId, description string) error {
+	file, err := os.OpenFile(fileName, os.O_APPEND|os.O_WRONLY|os.O_CREATE, TaskFilePermission)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	_, err = fmt.Fprintf(file, "%s##%s\n", taskId, description)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
 
 func addTask() {
 	reader := bufio.NewReader(os.Stdin)
@@ -46,49 +64,42 @@ func addTask() {
 	description = strings.TrimSpace(description)
 	taskId := uuid.New().String()
 
-	fmt.Println("TaskId is:", taskId)
+	log.Println("TaskId is:", taskId)
 
 	// Write the task to a file
-	file, err := os.OpenFile(fileName, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
+	err := WriteTaskToFile(TaskFileName, taskId, description)
 	if err != nil {
-		fmt.Println("Error opening file:", err)
-		return
-	}
-	defer file.Close()
-
-	_, err = fmt.Fprintf(file, "%s##%s\n", taskId, description)
-	if err != nil {
-		fmt.Println("Error writing to file:", err)
+		log.Println(err)
 		return
 	}
 
-	fmt.Println("Task added successfully.")
+	log.Println("Task added successfully.")
 }
 
 // listTasks reads tasks from a file and prints them to the console
 func listTasks() {
 	// Read tasks from a file
-	file, err := os.Open(fileName)
+	file, err := os.Open(TaskFileName)
 	if err != nil {
-		fmt.Println("Error opening file:", err)
+		log.Println("Error opening file:", err)
 		return
 	}
 	defer file.Close()
 
 	taskBytes, err := io.ReadAll(file)
 	if err != nil {
-		fmt.Println("Error reading file:", err)
+		log.Println("Error reading file:", err)
 		return
 	}
 
 	tasks := strings.Split(string(taskBytes), "\n")
 
 	// Print the tasks
-	fmt.Println("Tasks:")
+	log.Println("Tasks:")
 	for _, task := range tasks {
 		if task != "" {
 			// split the task into id and description
-			taskParts := strings.Split(task, splitString)
+			taskParts := strings.Split(task, TaskSplitString)
 			id := strings.TrimSpace(taskParts[0])
 			description := strings.TrimSpace(taskParts[1])
 
@@ -104,7 +115,7 @@ func updateTask() {
 	input = strings.TrimSpace(input)
 
 	if input == "" {
-		fmt.Println("Invalid task ID.")
+		log.Println("Invalid task ID.")
 		return
 	}
 
@@ -113,16 +124,16 @@ func updateTask() {
 	newDescription = strings.TrimSpace(newDescription)
 
 	// Read tasks from a file
-	file, err := os.Open(fileName)
+	file, err := os.Open(TaskFileName)
 	if err != nil {
-		fmt.Println("Error opening file:", err)
+		log.Println("Error opening file:", err)
 		return
 	}
 	defer file.Close()
 
 	taskBytes, err := io.ReadAll(file)
 	if err != nil {
-		fmt.Println("Error reading file:", err)
+		log.Println("Error reading file:", err)
 		return
 	}
 
@@ -134,7 +145,7 @@ func updateTask() {
 	for _, task := range tasks {
 		if task != "" {
 			// split the task into id and description
-			taskParts := strings.Split(task, splitString)
+			taskParts := strings.Split(task, TaskSplitString)
 			id := strings.TrimSpace(taskParts[0])
 
 			if id == input {
@@ -143,13 +154,13 @@ func updateTask() {
 				found = true
 			}
 
-			updateTask := strings.Join(taskParts, splitString)
+			updateTask := strings.Join(taskParts, TaskSplitString)
 			updatedTasks = append(updatedTasks, updateTask)
 		}
 	}
 
 	if !found {
-		fmt.Println("Task not found.")
+		log.Println("Task not found.")
 		return
 	}
 
@@ -157,13 +168,13 @@ func updateTask() {
 
 	// Write the updated tasks to the file
 	output := strings.Join(tasks, "\n")
-	err = os.WriteFile(fileName, []byte(output), 0644)
+	err = os.WriteFile(TaskFileName, []byte(output), 0644)
 	if err != nil {
-		fmt.Println("Error writing to file:", err)
+		log.Println("Error writing to file:", err)
 		return
 	}
 
-	fmt.Println("Task updated successfully.")
+	log.Println("Task updated successfully.")
 }
 
 // Delete a task by taskId
@@ -174,21 +185,21 @@ func deleteTask() {
 	input = strings.TrimSpace(input)
 
 	if input == "" {
-		fmt.Println("Invalid task ID.")
+		log.Println("Invalid task ID.")
 		return
 	}
 
 	// Read tasks from a file
-	file, err := os.Open(fileName)
+	file, err := os.Open(TaskFileName)
 	if err != nil {
-		fmt.Println("Error opening file:", err)
+		log.Println("Error opening file:", err)
 		return
 	}
 	defer file.Close()
 
 	taskBytes, err := io.ReadAll(file)
 	if err != nil {
-		fmt.Println("Error reading file:", err)
+		log.Println("Error reading file:", err)
 		return
 	}
 
@@ -200,20 +211,20 @@ func deleteTask() {
 	for _, task := range tasks {
 		if task != "" {
 			// split the task into id and description
-			taskParts := strings.Split(task, splitString)
+			taskParts := strings.Split(task, TaskSplitString)
 			id := strings.TrimSpace(taskParts[0])
 
 			if id == input {
 				found = true
 			} else {
-				updateTask := strings.Join(taskParts, splitString)
+				updateTask := strings.Join(taskParts, TaskSplitString)
 				updatedTasks = append(updatedTasks, updateTask)
 			}
 		}
 	}
 
 	if !found {
-		fmt.Println("Task not found.")
+		log.Println("Task not found.")
 		return
 	}
 
@@ -221,31 +232,31 @@ func deleteTask() {
 
 	// Write the updated tasks to the file
 	output := strings.Join(tasks, "\n")
-	err = os.WriteFile(fileName, []byte(output), 0644)
+	err = os.WriteFile(TaskFileName, []byte(output), 0644)
 	if err != nil {
-		fmt.Println("Error writing to file:", err)
+		log.Println("Error writing to file:", err)
 		return
 	}
 
-	fmt.Println("Task Remove successfully.")
+	log.Println("Task Remove successfully.")
 }
 
 // Delete all Task.
 func deleteAllTask() {
 	// Read tasks from a file
-	file, err := os.Open(fileName)
+	file, err := os.Open(TaskFileName)
 	if err != nil {
-		fmt.Println("Error opening file:", err)
+		log.Println("Error opening file:", err)
 		return
 	}
 	defer file.Close()
 
 	// remove file
-	err = os.Remove(fileName)
+	err = os.Remove(TaskFileName)
 	if err != nil {
-		fmt.Println("Error remove file:", err)
+		log.Println("Error remove file:", err)
 		return
 	}
 
-	fmt.Println("All Task Remove successfully.")
+	log.Println("All Task Remove successfully.")
 }

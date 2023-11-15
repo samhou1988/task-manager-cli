@@ -11,6 +11,36 @@ import (
 	"github.com/google/uuid"
 )
 
+type Task struct {
+	ID          string
+	Description string
+}
+
+type TaskController struct {
+	tasks []Task
+}
+
+func (tc *TaskController) AddTask(task Task) error {
+	tc.tasks = append(tc.tasks, task)
+
+	return WriteTaskToFile(TaskFileName, task.ID, task.Description)
+}
+
+func (tc *TaskController) ListTasks() []Task {
+	return nil
+}
+
+type TaskView struct {
+}
+
+func (tv *TaskView) DisplayTasks(tasks []Task) {
+
+}
+
+func (tv *TaskView) DisplayError(err error) {
+
+}
+
 func main() {
 	if len(os.Args) < 2 {
 		log.Println("Please provide a command.")
@@ -18,18 +48,29 @@ func main() {
 	}
 
 	command := os.Args[1]
+	tc := TaskController{}
+	tv := TaskView{}
 
 	switch command {
 	case "add":
-		addTask()
+		description := ReadFromInput()
+		task := Task{
+			ID:          uuid.New().String(),
+			Description: description,
+		}
+		err := tc.AddTask(task)
+		if err != nil {
+			log.Println(err)
+		}
 	case "list":
-		listTasks()
-	case "update":
-		updateTask()
-	case "delete":
-		deleteTask()
-	case "deleteAll":
-		deleteAllTask()
+		tasks := tc.ListTasks()
+		tv.DisplayTasks(tasks)
+	// case "update":
+	// 	updateTask()
+	// case "delete":
+	// 	deleteTask()
+	// case "deleteAll":
+	// 	deleteAllTask()
 	default:
 		log.Println("Invalid command.")
 	}
@@ -40,6 +81,13 @@ const (
 	TaskFilePermission = 0644
 	TaskSplitString    = "##"
 )
+
+func ReadFromInput() string {
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Print("Enter task description: ")
+	input, _ := reader.ReadString('\n')
+	return strings.TrimSpace(input)
+}
 
 func WriteTaskToFile(fileName, taskId, description string) error {
 	file, err := os.OpenFile(fileName, os.O_APPEND|os.O_WRONLY|os.O_CREATE, TaskFilePermission)
@@ -54,26 +102,6 @@ func WriteTaskToFile(fileName, taskId, description string) error {
 	}
 
 	return nil
-}
-
-func addTask() {
-	reader := bufio.NewReader(os.Stdin)
-
-	fmt.Print("Enter task description: ")
-	description, _ := reader.ReadString('\n')
-	description = strings.TrimSpace(description)
-	taskId := uuid.New().String()
-
-	log.Println("TaskId is:", taskId)
-
-	// Write the task to a file
-	err := WriteTaskToFile(TaskFileName, taskId, description)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-
-	log.Println("Task added successfully.")
 }
 
 // listTasks reads tasks from a file and prints them to the console
